@@ -1,0 +1,53 @@
+{
+    "configurations": [
+    
+        {
+            "type": "lldb",
+            "request": "launch",
+            "sourceLanguages": [
+                "swift"
+            ],
+            "args": [],
+            "cwd": "${workspaceFolder:XCMetrics}",
+            "name": "Debug XCMetrics",
+            "program": "${workspaceFolder:XCMetrics}/.build/debug/XCMetrics",
+            "preLaunchTask": "swift: Build Debug XCMetrics"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "sourceLanguages": [
+                "swift"
+            ],
+            "args": [],
+            "cwd": "${workspaceFolder:XCMetrics}",
+            "name": "Release XCMetrics",
+            "program": "${workspaceFolder:XCMetrics}/.build/release/XCMetrics",
+            "preLaunchTask": "swift: Build Release XCMetrics"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "sourceLanguages": [
+                "swift"
+            ],
+            "args": [],
+            "cwd": "${workspaceFolder:XCMetrics}",
+            "name": "Debug XCMetricsBackend",
+            "program": "${workspaceFolder:XCMetrics}/.build/debug/XCMetricsBackend",
+            "preLaunchTask": "swift: Build Debug XCMetricsBackend"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "sourceLanguages": [
+                "swift"
+            ],
+            "args": [],
+            "cwd": "${workspaceFolder:XCMetrics}",
+            "name": "Release XCMetricsBackend",
+            "program": "${workspaceFolder:XCMetrics}/.build/release/XCMetricsBackend",
+            "preLaunchTask": "swift: Build Release XCMetricsBackend"
+        }
+    ]
+}

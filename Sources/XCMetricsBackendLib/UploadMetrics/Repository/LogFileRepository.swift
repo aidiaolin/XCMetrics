@@ -32,12 +32,12 @@ protocol LogFileRepository {
     /// Stores the given file
     /// - Parameter logFile: An xcactivitylog
     /// - Returns: The URL where the file was stored
-    func put(logFile: File) throws -> URL
+    func put(logFile: File) async throws -> URL
 
     /// Fetches the log from the given URL
     /// - Parameter logURL: URL of the log to fetch
     /// - Returns: A local URL to the file
-    func get(logURL: URL) throws -> LogFile
+    func get(logURL: URL) async throws -> LogFile
 
     func delete(log: LogFile, wasProcessed: Bool) throws
 

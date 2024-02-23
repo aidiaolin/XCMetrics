@@ -19,67 +19,105 @@
 
 import Foundation
 import Vapor
-import S3
+import AWSS3
+import AWSClientRuntime
 
 /// `LogFileRepository` that uses Amazon S3 to store and fetch logs
 struct LogFileS3Repository: LogFileRepository {
 
     let bucketName: String
+    let s3Client: S3Client
 
-    let s3: S3
-
-    init(accessKey: String, bucketName: String, regionName: String, secretAccessKey: String) {
+    init(bucketName: String, region: String,
+         accessKeyId: String? = nil,
+         secretAccessKey: String? = nil,
+         sessionToken: String? = nil) async throws {
         self.bucketName = bucketName
-        guard let region = Region(rawValue: regionName) else {
-            preconditionFailure("Invalid S3 Region \(regionName)")
+
+        if accessKeyId == nil || secretAccessKey == nil {
+            self.s3Client = try S3Client(region: region)
+        } else if let keyId = accessKeyId, let secretKey = secretAccessKey {
+            // If both are not nil, use the given access key ID, secret access key, and session token
+            // to create credentialsProvider and S3 client
+            // to generate a static credentials provider suitable for use when
+            // initializing an Amazon S3 client.
+            let credentialsProvider = try AWSClientRuntime.StaticCredentialsProvider(
+                AWSClientRuntime.Credentials(accessKey: keyId,
+                                             secret: secretKey,
+                                             sessionToken: sessionToken
+                )
+            )
+            let s3Config = try await S3Client.S3ClientConfiguration(
+                credentialsProvider: credentialsProvider,
+                region: region
+            )
+            self.s3Client = S3Client(config: s3Config)
         }
-        self.s3 = S3(accessKeyId: accessKey, secretAccessKey: secretAccessKey, region: region)
     }
 
-    init?(config: Configuration) {
-        guard let bucketName = config.s3Bucket, let accessKey = config.awsAccessKeyId,
-              let secretAccessKey = config.awsSecretAccessKey,
-              let regionName = config.s3Region else {
+    init?(config: Configuration) async throws {
+        guard 
+            let bucketName = config.s3Bucket, 
+            let region = config.s3Region 
+        else {
             return nil
         }
-        self.init(accessKey: accessKey, bucketName: bucketName,
-                  regionName: regionName, secretAccessKey: secretAccessKey)
+
+        let accessKeyId = config.awsAccessKeyId
+        let secretAccessKeyId = config.awsSecretAccessKey
+
+        try await self.init(
+            bucketName: bucketName, 
+            region: region, 
+            accessKeyId: accessKeyId ?? nil, 
+            secretAccessKey: secretAccessKeyId ?? nil
+        )
     }
 
     func put(logFile: File) throws -> URL {
         let data = Data(logFile.data.xcm_onlyFileData().readableBytesView)
+        let bucket = bucketName
+        let key = logFile.filename
 
-        let putObjectRequest = S3.PutObjectRequest(acl: .private,
-                                                   body: data,
-                                                   bucket: bucketName,
-                                                   contentLength: Int64(data.count),
-                                                   key: logFile.filename)
-        let fileURL = try s3.putObject(putObjectRequest)
-            .map { _ -> URL? in
-                return URL(string: "s3://\(bucketName)/\(logFile.filename)")
-            }.wait()
-        guard let url = fileURL else {
-            throw RepositoryError.unexpected(message: "Invalid url of \(logFile.filename)")
+        let dataStream = ByteStream.from(data: data)
+
+        // Create the `PutObjectInput`
+        let input = PutObjectInput(body: dataStream,
+                                        bucket: bucket,
+                                        key: key)
+
+        // Put the object to S3
+        _ = try await s3Client.putObject(input: input)
+        
+        guard let url = URL(string: "s3://\(bucketName)/\(key)") else {
+            throw RepositoryError.unexpected(message: "Invalid url of \(key)")
         }
+
         return url
     }
 
-    func get(logURL: URL) throws -> LogFile {
+    func get(logURL: URL) async throws -> LogFile {
         guard let bucket = logURL.host else {
             throw RepositoryError.unexpected(message: "URL is not an S3 url \(logURL)")
         }
         let fileName = logURL.lastPathComponent
-        let request = S3.GetObjectRequest(bucket: bucket, key: fileName)
-        let fileData = try s3.getObject(request)
-            .map { response -> Data? in                
-                return response.body
-            }.wait()
-        guard let data = fileData else {
+
+        // Create the `GetObjectInput`
+        let input = GetObjectInput(bucket: bucket, key: fileName)
+
+        // Get the object from S3
+        let response = try await s3Client.getObject(input: input)
+
+        // Convert the byte stream to Data
+        let data = try await response.body?.toBytes().toData()
+        guard let data = data else {
             throw RepositoryError.unexpected(message: "There was an error downloading file \(logURL)")
         }
+
         let tmp = try TemporaryFile(creatingTempDirectoryForFilename: "\(UUID().uuidString).xcactivitylog")
-        try data.write(to: tmp.fileURL)
-        return LogFile(remoteURL: logURL, localURL: tmp.fileURL)
+        let fileURL = tmp.fileURL
+        try data.write(to: fileURL)
+        return LogFile(remoteURL: logURL, localURL: fileURL)
     }
 
 }
