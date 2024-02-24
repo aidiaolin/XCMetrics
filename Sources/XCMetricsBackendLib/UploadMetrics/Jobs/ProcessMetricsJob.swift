@@ -52,18 +52,18 @@ class ProcessMetricsJob: Job {
         let eventLoop = context.application.eventLoopGroup.next()
         let promise = eventLoop.makePromise(of: Void.self)
 
-        /// parsing is a blocking call, we execute it in a Dispatch Queue to not block the eventloop
-        queue.async {
-            self.semaphore.wait()
-
-            defer {
-                self.semaphore.signal()
-            }
+        // parsing is a blocking call, we execute it in a Task to not block the eventloop
+        Task {
+//            self.semaphore.wait()
+//
+//            defer {
+//                self.semaphore.signal()
+//            }
             let logFile: LogFile
             let buildMetrics: BuildMetrics
             do {
                 logWithTimestamp(context.logger, msg: "[ProcessMetricsJob] fetching log from \(payload.logURL)")
-                logFile = try self.logFileRepository.get(logURL: payload.logURL)
+                logFile = try await self.logFileRepository.get(logURL: payload.logURL)
                 logWithTimestamp(context.logger, msg: "[ProcessMetricsJob] log fetched to \(logFile.localURL)")
                 buildMetrics = try MetricsProcessor.process(metricsRequest: payload,
                                                             logFile: logFile,

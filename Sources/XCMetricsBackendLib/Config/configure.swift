@@ -24,7 +24,7 @@ import Redis
 import Vapor
 
 // configures your application
-public func configure(_ app: Application) throws {
+public func configure(_ app: Application) async throws {
 
     let config = Configuration()
     // Enable gzip support
@@ -122,6 +122,6 @@ public func configure(_ app: Application) throws {
     }
 
     // register routes
-    try routes(app)
+    try await routes(app)
 }
 

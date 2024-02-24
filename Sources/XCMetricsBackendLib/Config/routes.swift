@@ -21,7 +21,7 @@ import Vapor
 import Core
 import Storage
 
-func routes(_ app: Application) throws {
+func routes(_ app: Application) async throws {
     app.get { req in
         return "It works!"
     }
@@ -43,7 +43,7 @@ func routes(_ app: Application) throws {
     app.middleware.use(cors)
 
     // Log File Repository
-    let logFileRepository = LogFileRepositoryFactory.makeWithConfiguration(config: config, logger: app.logger)
+    let logFileRepository = try await LogFileRepositoryFactory.makeWithConfiguration(config: config, logger: app.logger)
 
     // Controllers
     try app.register(collection: BuildController())

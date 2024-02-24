@@ -65,14 +65,14 @@ public struct UploadMetricsController: RouteCollection {
         // Storing the log and decoding the request are blocking, we execute them in a background thread
         // to not block the eventloop
         return req.application.threadPool.runIfActive(eventLoop: req.eventLoop) { () -> UploadMetricsRequest in
-            // 2. Store the log
-            let logURL = try self.fileLogRepository.put(logFile: payload.log)
+            let logURLResult = Task { try await self.fileLogRepository.put(logFile: payload.log) }
+            let logURL = try await logURLResult.value
 
-            // 3. Decode the JSON documents into `Codable` types
-            guard let metricsRequest = try UploadMetricsRequest(logURL: logURL, payload: payload) else {
+            let metricsRequest = try UploadMetricsRequest(logURL: logURL, payload: payload)
+            guard metricsRequest != nil else {
                 throw Abort(.badRequest)
             }
-            return metricsRequest
+            return metricsRequest!
         }.flatMap { metricsRequest -> EventLoopFuture<HTTPStatus> in
             return req.queue.dispatch(ProcessMetricsJob.self,
                                       metricsRequest,
@@ -100,7 +100,7 @@ public struct UploadMetricsController: RouteCollection {
         // to not block the eventloop
         return req.application.threadPool.runIfActive(eventLoop: req.eventLoop) { () -> BuildMetrics in
             // 2. Store the log
-            let logURL = try self.fileLogRepository.put(logFile: payload.log)
+            let logURL = try await self.fileLogRepository.put(logFile: payload.log)
 
             // 3. Decode the JSON documents into `Codable` types
             guard let metricsRequest = try UploadMetricsRequest(logURL: logURL, payload: payload) else {

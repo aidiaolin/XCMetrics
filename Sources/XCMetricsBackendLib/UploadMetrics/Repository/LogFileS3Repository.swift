@@ -21,6 +21,7 @@ import Foundation
 import Vapor
 import AWSS3
 import AWSClientRuntime
+import ClientRuntime
 
 /// `LogFileRepository` that uses Amazon S3 to store and fetch logs
 struct LogFileS3Repository: LogFileRepository {
@@ -34,9 +35,13 @@ struct LogFileS3Repository: LogFileRepository {
          sessionToken: String? = nil) async throws {
         self.bucketName = bucketName
 
-        if accessKeyId == nil || secretAccessKey == nil {
+        if accessKeyId == nil {
             self.s3Client = try S3Client(region: region)
-        } else if let keyId = accessKeyId, let secretKey = secretAccessKey {
+        } else {
+            guard let keyId = accessKeyId,
+                    let secretKey = secretAccessKey else {
+                    throw RepositoryError.unexpected(message: "Missing access key ID or secret access key")
+            }
             // If both are not nil, use the given access key ID, secret access key, and session token
             // to create credentialsProvider and S3 client
             // to generate a static credentials provider suitable for use when
@@ -74,12 +79,12 @@ struct LogFileS3Repository: LogFileRepository {
         )
     }
 
-    func put(logFile: File) throws -> URL {
+    func put(logFile: File) async throws -> URL {
         let data = Data(logFile.data.xcm_onlyFileData().readableBytesView)
         let bucket = bucketName
         let key = logFile.filename
 
-        let dataStream = ByteStream.from(data: data)
+        let dataStream = ByteStream.data(data)
 
         // Create the `PutObjectInput`
         let input = PutObjectInput(body: dataStream,
@@ -109,7 +114,8 @@ struct LogFileS3Repository: LogFileRepository {
         let response = try await s3Client.getObject(input: input)
 
         // Convert the byte stream to Data
-        let data = try await response.body?.toBytes().toData()
+        let data = try await response.body?.readData()
+
         guard let data = data else {
             throw RepositoryError.unexpected(message: "There was an error downloading file \(logURL)")
         }
