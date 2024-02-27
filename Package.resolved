@@ -19,12 +19,21 @@
       }
     },
     {
-      "identity" : "aws-sdk-swift-core",
+      "identity" : "aws-crt-swift",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swift-aws/aws-sdk-swift-core.git",
+      "location" : "https://github.com/awslabs/aws-crt-swift",
       "state" : {
-        "revision" : "13738adc1603e4b50ae6aa3f758fc44f51e46aa3",
-        "version" : "4.5.1"
+        "revision" : "0d0a0cf2e2cb780ceeceac190b4ede94f4f96902",
+        "version" : "0.26.0"
+      }
+    },
+    {
+      "identity" : "aws-sdk-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/awslabs/aws-sdk-swift",
+      "state" : {
+        "revision" : "485501db8b0c57d6636c2b33a03dcd77ee0911f9",
+        "version" : "0.36.1"
       }
     },
     {
@@ -100,15 +109,6 @@
       }
     },
     {
-      "identity" : "hypertextapplicationlanguage",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swift-aws/HypertextApplicationLanguage.git",
-      "state" : {
-        "revision" : "aa2c9141d491682f17b2310aed17b9adfc006256",
-        "version" : "1.1.1"
-      }
-    },
-    {
       "identity" : "jwt-kit",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/vapor/jwt-kit.git",
@@ -151,15 +151,6 @@
       "state" : {
         "revision" : "3bfd2737b700b9a36565a8c94f4ad2b050a5e574",
         "version" : "1.0.1"
-      }
-    },
-    {
-      "identity" : "perfect-iniparser",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/swift-aws/Perfect-INIParser.git",
-      "state" : {
-        "revision" : "42de0efc7a01105e19b80d533d3d282a98277f6c",
-        "version" : "3.0.3"
       }
     },
     {
@@ -221,8 +212,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://gitlab.com/mordil/RediStack.git",
       "state" : {
-        "revision" : "b2367ac33eb8632011c1ec7afff12307838a4dab",
-        "version" : "1.1.0"
+        "revision" : "43d94452a8be6ebebb07ec7bcf4e6f19888e1251",
+        "version" : "1.4.1"
       }
     },
     {
@@ -235,12 +226,12 @@
       }
     },
     {
-      "identity" : "soto",
+      "identity" : "smithy-swift",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/soto-project/soto.git",
+      "location" : "https://github.com/smithy-lang/smithy-swift",
       "state" : {
-        "revision" : "803ab6a86a3c90e1405afb8fd6a131ec9b9ec64a",
-        "version" : "4.6.0"
+        "revision" : "64e66f3e3ac07d4180c2460a7af6e4ba4b92e9cb",
+        "version" : "0.41.0"
       }
     },
     {

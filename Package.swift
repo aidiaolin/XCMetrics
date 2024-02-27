@@ -33,7 +33,7 @@ let package = Package(
         .package(url: "https://github.com/vapor/queues.git", from: "1.5.1"),
         .package(url: "https://github.com/vapor/redis.git", from: "4.0.0"),
         .package(url: "https://github.com/vapor-community/google-cloud-kit.git", from: "1.0.0-rc.2"),
-        .package(url: "https://github.com/soto-project/soto.git", from: "4.0.0"),
+        .package(url: "https://github.com/awslabs/aws-sdk-swift", from: "0.36.0")
     ],
     targets: [
         .target(
@@ -93,7 +93,7 @@ let package = Package(
                 .product(name: "XCLogParser", package: "XCLogParser"),
                 .product(name: "CryptoSwift", package: "CryptoSwift"),
                 .product(name: "GoogleCloudKit", package: "google-cloud-kit"),
-                .product(name: "S3", package: "soto"),
+                .product(name: "AWSS3", package: "aws-sdk-swift"),
                 "XCMetricsCommon"
             ],
             swiftSettings: [

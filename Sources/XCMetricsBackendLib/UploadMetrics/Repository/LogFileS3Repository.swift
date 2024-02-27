@@ -19,48 +19,56 @@
 
 import Foundation
 import Vapor
-import S3
+import ClientRuntime
+import AWSS3
 
 /// `LogFileRepository` that uses Amazon S3 to store and fetch logs
 struct LogFileS3Repository: LogFileRepository {
 
     let bucketName: String
+    let group: EventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
+    let s3Client: S3Client
 
-    let s3: S3
-
-    init(accessKey: String, bucketName: String, regionName: String, secretAccessKey: String) {
-        self.bucketName = bucketName
-        guard let region = Region(rawValue: regionName) else {
-            preconditionFailure("Invalid S3 Region \(regionName)")
+    
+    init?(bucketName: String, regionName: String) {
+        guard let client = try? S3Client(region: regionName) else {
+            print("Failed to initialize S3 client")
+            return nil
         }
-        self.s3 = S3(accessKeyId: accessKey, secretAccessKey: secretAccessKey, region: region)
+        self.s3Client = client
+        self.bucketName = bucketName
     }
 
     init?(config: Configuration) {
-        guard let bucketName = config.s3Bucket, let accessKey = config.awsAccessKeyId,
-              let secretAccessKey = config.awsSecretAccessKey,
+        guard let bucketName = config.s3Bucket, 
               let regionName = config.s3Region else {
             return nil
         }
-        self.init(accessKey: accessKey, bucketName: bucketName,
-                  regionName: regionName, secretAccessKey: secretAccessKey)
+        self.init(bucketName: bucketName, regionName: regionName)
     }
 
     func put(logFile: File) throws -> URL {
         let data = Data(logFile.data.xcm_onlyFileData().readableBytesView)
 
-        let putObjectRequest = S3.PutObjectRequest(acl: .private,
-                                                   body: data,
-                                                   bucket: bucketName,
-                                                   contentLength: Int64(data.count),
-                                                   key: logFile.filename)
-        let fileURL = try s3.putObject(putObjectRequest)
-            .map { _ -> URL? in
-                return URL(string: "s3://\(bucketName)/\(logFile.filename)")
-            }.wait()
-        guard let url = fileURL else {
+        let dataStream = ByteStream.data(data)
+
+        let input = PutObjectInput(
+            body: dataStream,
+            bucket: bucketName,
+            key: logFile.filename
+        )
+        
+        let promise = group.next().makePromise(of: Void.self)
+        Task {
+            let _ = try await self.s3Client.putObject(input: input)
+            promise.succeed(())
+        }
+        try promise.futureResult.wait()
+        
+        guard let url = URL(string: "s3://\(bucketName)/\(logFile.filename)") else {
             throw RepositoryError.unexpected(message: "Invalid url of \(logFile.filename)")
         }
+
         return url
     }
 
@@ -69,17 +77,28 @@ struct LogFileS3Repository: LogFileRepository {
             throw RepositoryError.unexpected(message: "URL is not an S3 url \(logURL)")
         }
         let fileName = logURL.lastPathComponent
-        let request = S3.GetObjectRequest(bucket: bucket, key: fileName)
-        let fileData = try s3.getObject(request)
-            .map { response -> Data? in                
-                return response.body
-            }.wait()
-        guard let data = fileData else {
-            throw RepositoryError.unexpected(message: "There was an error downloading file \(logURL)")
+        
+        let input = GetObjectInput(
+            bucket: bucket,
+            key: fileName
+        )
+        
+        let promise = group.next().makePromise(of: Data.self)
+        Task {
+            let output = try await self.s3Client.getObject(input: input)
+            
+            // Get the data stream object. Return immediately if there isn't one.
+            guard let body = output.body,
+                  let data = try await body.readData() else {
+                promise.fail(RepositoryError.unexpected(message: "There was an error downloading file \(logURL)"))
+                return
+            }
+            promise.succeed(data)
         }
+        let data = try promise.futureResult.wait()
+    
         let tmp = try TemporaryFile(creatingTempDirectoryForFilename: "\(UUID().uuidString).xcactivitylog")
         try data.write(to: tmp.fileURL)
         return LogFile(remoteURL: logURL, localURL: tmp.fileURL)
     }
-
 }
