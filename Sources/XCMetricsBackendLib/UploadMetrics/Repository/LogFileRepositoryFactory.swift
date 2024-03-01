@@ -21,7 +21,6 @@ import Foundation
 import Vapor
 
 struct LogFileRepositoryFactory {
-
     static func makeWithConfiguration(config: Configuration, logger: Logger) -> LogFileRepository {
         if config.useGCSLogRepository {
             logger.info("Initializing GCS LogFileRepository")
@@ -33,7 +32,7 @@ struct LogFileRepositoryFactory {
         }
         if config.useS3LogRepository {
             logger.info("Initializing S3 LogFileRepository")
-            guard let s3Repository = LogFileS3Repository(config: config) else {
+            guard let s3Repository = LogFileS3Repository(config: config, logger: logger) else {
                 preconditionFailure("AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, XCMETRICS_S3_BUCKET and " +
                     "XCMETRICS_S3_REGION are required when XCMETRICS_USE_S3_REPOSITORY is used")
             }
@@ -41,5 +40,4 @@ struct LogFileRepositoryFactory {
         }
         return LocalLogFileRepository()
     }
-
 }
