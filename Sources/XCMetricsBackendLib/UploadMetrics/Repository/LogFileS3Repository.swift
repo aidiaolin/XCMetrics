@@ -31,10 +31,32 @@ struct LogFileS3Repository: LogFileRepository {
     let s3Client: S3Client
     let logger: Logger
 
-    init?(bucketName: String, regionName: String, logger: Logger) {
+    init?(config: Configuration, logger: Logger) {
+        self.logger = logger
+        guard let bucketName = config.s3Bucket,
+              let regionName = config.s3Region
+        else {
+            return nil
+        }
+
         var client: S3Client?
-        if Environment.get("AWS_PROFILE") != nil {
+        if let keyId = config.awsAccessKeyId, let secretKey = config.awsSecretAccessKey {
+            // Initialize S3 client with StaticCredentialsProvider
+            logger.info("[LogFileS3Repository] Initializing S3 client using aws access key")
+            client = try? S3Client(
+                config: S3Client.S3ClientConfiguration(
+                    region: regionName,
+                    credentialsProvider: AWSClientRuntime.StaticCredentialsProvider(
+                        AWSClientRuntime.Credentials(
+                            accessKey: keyId,
+                            secret: secretKey
+                        )
+                    )
+                )
+            )
+        } else if let awsProfile = config.awsProfile {
             // Initialize S3 client with SSOCredentialsProvider
+            logger.info("[LogFileS3Repository] Initializing S3 client using profile: \(awsProfile)")
             client = try? S3Client(
                 config: S3Client.S3ClientConfiguration(
                     region: regionName,
@@ -42,6 +64,9 @@ struct LogFileS3Repository: LogFileRepository {
                 )
             )
         } else {
+            // Initialize S3 client with default credentials,
+            // which will use temporary credentials that are associated with the IAM role
+            logger.info("[LogFileS3Repository] Initializing S3 client using default credentials")
             client = try? S3Client(region: regionName)
         }
 
@@ -52,34 +77,6 @@ struct LogFileS3Repository: LogFileRepository {
 
         self.s3Client = s3Client
         self.bucketName = bucketName
-        self.logger = logger
-
-//         Verify the client
-        //  let promise = group.next().makePromise(of: Void.self)
-        //  Task {
-        //      do {
-        //          let response = try await s3Client.listBuckets(input: ListBucketsInput()) // This will list all available S3 buckets
-        //          promise.succeed(())
-        //          print("Available buckets: \(String(describing: response.buckets))")
-        //      } catch {
-        //          print("Unable to retrieve the list of buckets, error: \(error.localizedDescription)")
-        //          promise.fail(error)
-        //      }
-        //  }
-        //  do {
-        //      try promise.futureResult.wait()
-        //  } catch {
-        //      print("Error waiting for promise: \(error)")
-        //  }
-    }
-
-    init?(config: Configuration, logger: Logger) {
-        guard let bucketName = config.s3Bucket,
-              let regionName = config.s3Region
-        else {
-            return nil
-        }
-        self.init(bucketName: bucketName, regionName: regionName, logger: logger)
     }
 
     func put(logFile: File) throws -> URL {

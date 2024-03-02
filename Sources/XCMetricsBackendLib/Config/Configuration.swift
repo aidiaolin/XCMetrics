@@ -133,6 +133,11 @@ class Configuration {
         return Environment.get("AWS_SECRET_ACCESS_KEY")
     }()
 
+    /// Amazon AWS Profile of an account with permissions to write and read to an S3's bucket
+    lazy var awsProfile: String? = {
+        return Environment.get("AWS_PROFILE")
+    }()
+
     /// Name of the S3 Bucket to use to store logs
     lazy var s3Bucket: String? = {
         return Environment.get("XCMETRICS_S3_BUCKET")

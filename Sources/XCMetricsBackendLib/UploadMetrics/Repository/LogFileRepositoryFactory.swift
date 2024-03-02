@@ -33,8 +33,7 @@ struct LogFileRepositoryFactory {
         if config.useS3LogRepository {
             logger.info("Initializing S3 LogFileRepository")
             guard let s3Repository = LogFileS3Repository(config: config, logger: logger) else {
-                preconditionFailure("AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, XCMETRICS_S3_BUCKET and " +
-                    "XCMETRICS_S3_REGION are required when XCMETRICS_USE_S3_REPOSITORY is used")
+                preconditionFailure("XCMETRICS_S3_BUCKET and XCMETRICS_S3_REGION are required when XCMETRICS_USE_S3_REPOSITORY is used")
             }
             return s3Repository
         }
